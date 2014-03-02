@@ -19,7 +19,13 @@ class Welcome extends CI_Controller {
 	 */
 	public function index()
 	{
-		$this->load->view('welcome_message');
+		$this->load->model('fm_weather');
+		
+		header('Content-type: text/plain');
+		
+		var_dump( $this->m_facts->get('weather.current.klot.pressure_in') );
+		
+		#$this->load->view('welcome_message');
 	}
 }
 
