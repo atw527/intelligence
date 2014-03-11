@@ -19,13 +19,23 @@ class Welcome extends CI_Controller {
 	 */
 	public function index()
 	{
-		$this->load->model('fm_weather');
+		if (!$this->input->is_cli_request()) $this->output->enable_profiler(TRUE);
+		
+		$this->load->view('welcome_message');
+	}
+	
+	public function headers()
+	{
+		stream_context_set_default(array('http' => array('method' => 'HEAD')));
+		$headers = get_headers('http://w1.weather.gov/xml/current_obs/all_xml.zip', 1);
 		
 		header('Content-type: text/plain');
-		
-		var_dump( $this->m_facts->get('weather.current.klot.pressure_in') );
-		
-		#$this->load->view('welcome_message');
+		var_dump($headers);
+	}
+	
+	public function weather()
+	{
+		$this->fm_weather->import_zip();
 	}
 }
 

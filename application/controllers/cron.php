@@ -11,9 +11,17 @@ class cron extends CI_Controller
 
 	public function index()
 	{
-		//header('Content-type: text/plain');
+		$lockfile = APPPATH . 'cache/cron.lock';
 		
-		$this->load->model('fm_weather');
+		if (file_exists($lockfile))
+		{
+			log_message('error', 'Cron is still running...maybe a stuck lock file?');
+			return;
+		}
+		
+		file_put_contents($lockfile, 1);
+		
+		$this->benchmark->mark('cron_start');
 		
 		foreach ($this as &$object)
 		{
@@ -31,12 +39,17 @@ class cron extends CI_Controller
 				
 				/* still here?  better run it! */
 				$this->$class->$method();
-				log_message('debug', "Cron Run - $class->$method, freq of $frequency seconds");
+				log_message('info', "Cron Run - $class->$method, freq of $frequency seconds");
 				
 				$sql = "INSERT INTO `cron` (`class`, `method`) VALUES ('$class', '$method') ON DUPLICATE KEY UPDATE `timestamp` = NOW()";
 				$query = $this->db->query($sql);
 			}
 		}
+		
+		@unlink($lockfile);
+		
+		$this->benchmark->mark('cron_end');
+		log_message('info', 'Cron run time - ' . $this->benchmark->elapsed_time('cron_start', 'cron_end'));
 	}
 }
 

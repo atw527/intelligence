@@ -70,6 +70,15 @@
 	<h1>Welcome to CodeIgniter!</h1>
 
 	<div id="body">
+		
+		<code>Load Status: <?=_f('nagios.service.atw-05.CPU Load')?></code>
+		<code>Load 1: <?=_f('nagios.service.atw-05.CPU Load.Load1')?></code>
+		<code>Load 5: <?=_f('nagios.service.atw-05.CPU Load.Load5')?></code>
+		<code>Load 15: <?=_f('nagios.service.atw-05.CPU Load.Load15')?></code>
+		
+		<code>atw-20 Battery: <?=_f('nagios.service.atw-20.Battery.Battery')?></code>
+		
+		
 		<p>The page you are looking at is being generated dynamically by CodeIgniter.</p>
 
 		<p>If you would like to edit this page you'll find it located at:</p>

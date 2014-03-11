@@ -47,7 +47,7 @@ class http
 			curl_close($crl);
 			
 			file_put_contents($cachefile, $res);
-			unlink($lockfile);
+			@unlink($lockfile);
 			
 			return $res;
 		}
