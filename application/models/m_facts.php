@@ -33,8 +33,8 @@ class m_facts extends CI_Model
 	 */
 	public function get_row($fact)
 	{
-		$afact = $this->str_to_arr($fact);
-		$sfact = $this->arr_to_str($fact);
+		$afact = $this->to_arr($fact);
+		$sfact = $this->to_str($fact);
 		
 		// the parent fact is one level up, so the parent of nagios.host.atw-05 is nagios.host
 		$pfact = $afact;
@@ -53,13 +53,17 @@ class m_facts extends CI_Model
 		{
 			// The requested fact doesn't exist.  We will create one with a null value and return that.
 			
-			$query = $this->db->query("INSERT INTO `facts` (`parent_id`, `name`) VALUES ($pfact_id, '$name')");
+			// first see if this has a spark
+			$has_spark = (int)$this->m_sparks->spark_exists($sfact);
+			
+			$query = $this->db->query("INSERT INTO `facts` (`parent_id`, `name`, `has_spark`) VALUES ($pfact_id, '$name', $has_spark)");
 			
 			$row = new stdClass;
 			$row->fact_id = $this->db->insert_id();
 			$row->parent_id = $pfact_id;
 			$row->name = $name;
 			$row->value = null;
+			$row->has_spark = null;
 			$row->timestamp = date('Y-m-d g:i:s');
 			
 			return $row;
@@ -91,8 +95,8 @@ class m_facts extends CI_Model
 	 */
 	public function get_id($fact)
 	{
-		$afact = $this->str_to_arr($fact);
-		$sfact = $this->arr_to_str($fact);
+		$afact = $this->to_arr($fact);
+		$sfact = $this->to_str($fact);
 		
 		if (count($afact) > 3) return $this->get_row($fact)->fact_id;
 		
@@ -121,22 +125,19 @@ class m_facts extends CI_Model
 	 */
 	public function update($fact, $value)
 	{
-		$afact = $this->str_to_arr($fact);
-		$sfact = $this->arr_to_str($fact);
+		$afact = $this->to_arr($fact);
+		$sfact = $this->to_str($fact);
 		
-		// TODO hooks
-		// check if we have a hook
-		// fetch the current fact data if we do to compare the values
+		$row = $this->get_row($afact);
 		
-		// the parent fact is one level up, so the parent of nagios.host.atw-05 is nagios.host
-		$pfact = $afact;
-		$name = array_pop($pfact);
-		$name = $this->db->escape_str($name);
-		$pfact_id = (count($pfact) == 0) ? -1 : $this->get_id($pfact);
+		if ($row->has_spark && $row->value != $value)
+		{
+			$this->m_sparks->call_sparks($sfact, $row->value, $value);
+		}
 		
 		$value = $this->db->escape_str($value);
 		
-		$sql = "INSERT INTO `facts` (`parent_id`, `name`, `value`) VALUES ('$pfact_id', '$name', '$value') ON DUPLICATE KEY UPDATE `value` = '$value', `timestamp` = NOW()";
+		$sql = "UPDATE `facts` SET `value` = '$value', `timestamp` = NOW() WHERE `fact_id` = $row->fact_id LIMIT 1";
 		$query = $this->db->query($sql);
 		
 		//log_message('info', "Fact update success - $fact / $value");
@@ -162,7 +163,7 @@ class m_facts extends CI_Model
 			return false;
 		}
 		
-		$afact = $this->str_to_arr($fact);
+		$afact = $this->to_arr($fact);
 		
 		if ($fact_row === false)
 		{
@@ -170,7 +171,7 @@ class m_facts extends CI_Model
 		}
 		
 		// write the current fact we are working in
-		fwrite($this->file, $this->arr_to_str($afact) . " = " . $fact_row->value . "\n");
+		fwrite($this->file, $this->to_str($afact) . " = " . $fact_row->value . "\n");
 		
 		// see if we have any children
 		
@@ -195,27 +196,27 @@ class m_facts extends CI_Model
 	 * @param	string
 	 * @return	array
 	 */
-	public function str_to_arr($sfact)
+	public function to_arr($fact)
 	{
-		if (is_array($sfact)) return $sfact; // silly goose, this is already an array!
+		if (is_array($fact)) return $fact; // silly goose, this is already an array!
 		
 		// thankfully PHP has a native method for dealing with CSV lines, 
 		// this is basically the same thing, but with periods instead
-		return str_getcsv($sfact, '.', '"');
+		return str_getcsv($fact, '.', '"');
 	}
 	
 	/**
-	 * Converts a fact from array format to string format
+	 * Converts a fact from array format to string format, or reformats the string
 	 * 
 	 * @access	public
 	 * @param	array
 	 * @return	string
 	 */
-	public function arr_to_str($afact)
+	public function to_str($fact)
 	{
-		if (!is_array($afact)) return $afact; // silly goose, this is already a string!
+		if (!is_array($fact)) $fact = str_getcsv($fact, '.', '"');
 		
-		foreach ($afact as &$value)
+		foreach ($fact as &$value)
 		{
 			// I am attempting to follow the format of CSV, except with periods
 			if (preg_match('/[". ]+/', $value))
@@ -224,22 +225,7 @@ class m_facts extends CI_Model
 			}
 		}
 		
-		return implode('.', $afact);
-	}
-	
-	/**
-	 * Converts fact from string format to string format :D
-	 * 
-	 * Yes, this makes sense because the string is then formatted to our standards
-	 * External applications may enclode the keys in quotes when not necessary, for example
-	 * 
-	 * @access	public
-	 * @param	string
-	 * @return	string
-	 */
-	public function str_to_str($sfact)
-	{
-		return $this->arr_to_str($this->str_to_arr($sfact));
+		return implode('.', $fact);
 	}
 	
 	/**

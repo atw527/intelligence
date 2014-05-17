@@ -37,6 +37,13 @@ class Welcome extends CI_Controller {
 	{
 		$this->fm_weather->import_zip();
 	}
+	
+	public function match()
+	{
+		header('Content-type: text/plain');
+		
+		echo $this->m_hooks->hook_exists('nagios.host.atw-05');
+	}
 }
 
 /* End of file welcome.php */

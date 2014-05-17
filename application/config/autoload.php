@@ -109,7 +109,7 @@ $autoload['language'] = array();
 |
 */
 
-$autoload['model'] = array('m_facts', 'fm_weather', 'fm_nagios');
+$autoload['model'] = array('m_facts', 'm_sparks', 'fm_weather', 'fm_nagios');
 
 
 /* End of file autoload.php */

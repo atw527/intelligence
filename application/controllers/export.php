@@ -14,7 +14,7 @@ class export extends CI_Controller
 		if (!$this->input->is_cli_request()) $this->output->enable_profiler(TRUE);
 		
 		$this->m_facts->file = fopen('/tmp/export.txt', 'w');
-		$this->m_facts->export('weather.current.klot');
+		$this->m_facts->export('nagios.host');
 		fclose($this->m_facts->file);
 		
 		echo '<pre>';
